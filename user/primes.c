@@ -2,66 +2,82 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-void subRoute(int *p)
+#define PIPE_WRITE_PORT 1
+#define PIPE_READ_PORT 0
+#define PIPE_SIZE 2
+
+#define DEFAULT_READ_PORT 0
+#define DEFAULT_WRITE_PORT 1
+#define DEFAULT_ERROR_PORT 2
+
+int filter(int i, int j)
 {
-    close(p[1]);
+    return i % j;
+}
 
-    int first = 3;
-    int flag = read(p[0], &first, 4);
+void subRoute(int *parent_pipe)
+{
+    close(parent_pipe[PIPE_WRITE_PORT]);
 
-    if(flag==0) {
+    int firstPrime;
+    int endFlag = read(parent_pipe[PIPE_READ_PORT], &firstPrime, 4);
+
+    if (endFlag == 0)
+    {
+        close(parent_pipe[PIPE_READ_PORT]);
         exit(0);
     }
 
-    printf("prime %d\n", first);
+    printf("prime %d\n", firstPrime);
 
-    int pp[2];
-    pipe(pp);
+    int my_pipe[PIPE_SIZE];
+    pipe(my_pipe);
 
     if (fork() == 0)
     {
-        close(p[0]);
-        subRoute(pp);
+        close(parent_pipe[PIPE_READ_PORT]);
+        subRoute(my_pipe);
 
         exit(0);
     }
     else
     {
-        close(pp[0]);
+        close(my_pipe[PIPE_READ_PORT]);
         while (1)
         {
             int j;
-            int ret = read(p[0], &j, 4);
+            int ret = read(parent_pipe[PIPE_READ_PORT], &j, 4);
 
             if (ret == 0)
             {
                 break;
             }
 
-            if (j % first != 0)
+            if (filter(j, firstPrime))
             {
-                write(pp[1], &j, 4);
+                write(my_pipe[PIPE_WRITE_PORT], &j, 4);
             }
         }
     }
 
-    close(pp[1]);
-    close(p[0]);
+    close(my_pipe[PIPE_WRITE_PORT]);
+    close(parent_pipe[PIPE_READ_PORT]);
+
     wait(0);
     exit(0);
 }
 
 int main(int argc, char *argv[])
 {
-    close(0);
-    close(2);
+    close(DEFAULT_READ_PORT);
+    close(DEFAULT_ERROR_PORT);
 
-    int p[2];
-    pipe(p);
+    int main_pipe[PIPE_SIZE];
+    pipe(main_pipe);
 
     if (fork() == 0)
     {
-        subRoute(p);
+        subRoute(main_pipe);
 
         exit(0);
     }
@@ -69,9 +85,9 @@ int main(int argc, char *argv[])
     {
         for (int i = 2; i <= 35; i++)
         {
-            write(p[1], &i, 4);
+            write(main_pipe[PIPE_WRITE_PORT], &i, 4);
         }
-        close(p[1]);
+        close(main_pipe[PIPE_WRITE_PORT]);
 
         wait(0);
         exit(0);
