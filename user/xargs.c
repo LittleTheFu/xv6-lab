@@ -37,6 +37,12 @@ int readLine(char *line, int len)
 
 void extractFromOriginArgv(char *myArgs[], int myArgsLen, char *argv[], int argvLen)
 {
+    if (myArgsLen < argvLen)
+    {
+        fprintf(2,"not enough space in extractFromOriginArgv\n");
+        exit(1);
+    }
+    
     for (int i = 1; i < argvLen; i++)
     {
         myArgs[i - 1] = argv[i];
