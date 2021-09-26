@@ -32,89 +32,56 @@ int readLine(char *line, int len)
         }
     }
 
-    // printf("line : %s %d\n", line, lineCur);
-
     return lineCur;
 }
 
-int makeArgs(char *line, int len, char *readArgs[], int argsLen)
+void extractFromOriginArgv(char *myArgs[], int myArgsLen, char *argv[], int argvLen)
 {
-    memset(readArgs, 0, argsLen);
-    // memset(readArgs, 0, 16 * 16);
-
-    if (line[0] == '\0')
+    for (int i = 1; i < argvLen; i++)
     {
-        return 0;
+        myArgs[i - 1] = argv[i];
+    }
+}
+
+void extartArgsFromLine(char *myArgs[], int myArgsLen, int start, char *line, int lineLen)
+{
+    int idx = start;
+
+    if (line[0] != '\0')
+    {
+        myArgs[idx] = &line[0];
+        idx++;
     }
 
-    readArgs[0] = &line[0];
-    // strcpy(readArgs[0], &line[0]);
-    int argCur = 1;
-
-    for (int i = 1; i < len; i++)
+    for (int i = 1; i < lineLen; i++)
     {
-        if (line[i] != '\0' && line[i - 1] == '\0')
+        if (line[i] != '\0' && line[i - 1] == '\0' && myArgsLen < idx)
         {
-            readArgs[argCur] = &line[i];
-            // strcpy(readArgs[argCur], &line[i]);
-
-            argCur++;
+            myArgs[idx] = &line[i];
+            idx++;
         }
     }
-
-    // printf("########################%d\n", argCur);
-    for (int j = 0; j < argCur; j++)
-    {
-        // printf("args[%d]: %s\n", j, readArgs[j]);
-    }
-    // printf("########################\n");
-
-    return argCur;
 }
 
 int main(int argc, char *argv[])
 {
     const int LINE_LEN = 128;
     char line[LINE_LEN];
- 
-    char *myArgs[28];
-    memset(myArgs,0,28);
 
- 
-    for (int i = 1; i < argc; i++)
-    {
-        myArgs[i - 1] = argv[i];
-    }
-    int idx = argc - 1;
+    const int MY_ARGS_NUM = 20;
+    char *myArgs[MY_ARGS_NUM];
+    memset(myArgs, 0, MY_ARGS_NUM);
+
+    extractFromOriginArgv(myArgs, MY_ARGS_NUM, argv, argc);
+    int start = argc - 1;
 
     while (readLine(line, LINE_LEN))
     {
         if (fork() == 0)
         {
-            if (line[0] != '\0')
-            {
-                myArgs[idx] = &line[0];
-                idx++;
-            }
+            //MY_ARGS_NUM - 1: at least have a place to hold the last zero pointer
+            extartArgsFromLine(myArgs, MY_ARGS_NUM - 1, start, line, LINE_LEN);
 
-            for (int i = 1; i < LINE_LEN; i++)
-            {
-                if (line[i] != '\0' && line[i - 1] == '\0')
-                {
-                    // printf("before [%d] : %s\n", start, argv[start]);
-                    myArgs[idx] = &line[i];
-                    // printf("after [%d] : %s\n", start, argv[start]);
-
-                    idx++;
-                }
-            }
-            // argv[argc + idx] = 0;
-
-            for (int j = 0; j < 7; j++)
-            {
-                // printf("myArgs[%d]:%s\n", j, myArgs[j]);
-                // printf("argv[%d]:%s\n", j, argv[j]);
-            }
             exec(myArgs[0], myArgs);
             exit(0);
         }
