@@ -51,11 +51,12 @@ void search(char *name, char *key)
     }
 
     struct dirent de;
+    char fileName[FIND_BUFFER_LEN];
+    char fullName[FIND_BUFFER_LEN];
 
     switch (st.type)
     {
     case T_FILE:
-        char fileName[FIND_BUFFER_LEN];
         getFileName(fileName, name, FIND_BUFFER_LEN);
 
         if (strcmp(fileName, key) == 0)
@@ -74,7 +75,6 @@ void search(char *name, char *key)
             if (strcmp(de.name, "..") == 0)
                 continue;
 
-            char fullName[FIND_BUFFER_LEN];
 
             getFullPath(fullName, name, de.name, FIND_BUFFER_LEN);
             search(fullName, key);
