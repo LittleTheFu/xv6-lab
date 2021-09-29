@@ -21,6 +21,7 @@
 #define SYS_mkdir  20
 #define SYS_close  21
 #define SYS_trace 22
+#define SYS_sysinfo 23
 
-#define SYS_FIRST 1
-#define SYS_LAST 22
+#define SYS_FIRST SYS_fork
+#define SYS_LAST SYS_sysinfo
