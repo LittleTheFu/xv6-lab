@@ -21,10 +21,15 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+//for lab usertests
+extern char etext[];  // kernel.ld sets this to end of kernel code.
+extern pagetable_t kernel_pagetable;
+
 // initialize the proc table at boot time.
 void
 procinit(void)
 {
+  printf("BEGIN proc init \n");
   struct proc *p;
   
   initlock(&pid_lock, "nextpid");
@@ -38,10 +43,12 @@ procinit(void)
       if(pa == 0)
         panic("kalloc");
       uint64 va = KSTACK((int) (p - proc));
-      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      kvmmap(kernel_pagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
       p->kstack = va;
   }
   kvminithart();
+  // vmprint(kernel_pagetable);
+  printf("END proc init \n");
 }
 
 // Must be called with interrupts disabled,
@@ -92,6 +99,7 @@ allocpid() {
 static struct proc*
 allocproc(void)
 {
+  printf("BEGIN allocproc\n");
   struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++) {
@@ -121,11 +129,29 @@ found:
     return 0;
   }
 
+  p->keanelpagetable = proc_kerneltable();
+  if(p->pagetable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+   char *pa = kalloc();
+      if(pa == 0)
+        panic("kalloc");
+    uint64 va = KSTACK((int) (p - proc));
+    kvmmap(p->keanelpagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+    p->kstack = va;
+
+
+
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
+
+  printf("END allocproc\n");
 
   return p;
 }
@@ -141,6 +167,8 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  if(p->keanelpagetable)
+    proc_freekerneltable(p->keanelpagetable, p->sz);
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -150,6 +178,40 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+}
+
+// Create a kernel page table for a given process
+pagetable_t
+proc_kerneltable()
+{
+  pagetable_t kernel_tlb;
+
+  kernel_tlb = (pagetable_t) kalloc();
+  memset(kernel_tlb, 0, PGSIZE);
+
+  // uart registers
+  kvmmap(kernel_tlb, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  kvmmap(kernel_tlb, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // CLINT
+  kvmmap(kernel_tlb, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // PLIC
+  kvmmap(kernel_tlb, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  kvmmap(kernel_tlb, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  kvmmap(kernel_tlb, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  kvmmap(kernel_tlb, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+
+  return kernel_tlb;
 }
 
 // Create a user page table for a given process,
@@ -183,6 +245,16 @@ proc_pagetable(struct proc *p)
   }
 
   return pagetable;
+}
+
+// Free a process's page table, and free the
+// physical memory it refers to.
+void
+proc_freekerneltable(pagetable_t pagetable, uint64 sz)
+{
+  uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+  uvmunmap(pagetable, TRAPFRAME, 1, 0);
+  uvmfreewithoutleaf(pagetable, sz);
 }
 
 // Free a process's page table, and free the
@@ -473,6 +545,10 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+
+        w_satp(MAKE_SATP(p->keanelpagetable));
+        sfence_vma();
+
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -483,9 +559,17 @@ scheduler(void)
       }
       release(&p->lock);
     }
+
+    // if(found == 0)
+    // {
+    //     w_satp(MAKE_SATP(p->keanelpagetable));
+    //     sfence_vma();
+    // }
+
 #if !defined (LAB_FS)
     if(found == 0) {
       intr_on();
+      kvminithart();
       asm volatile("wfi");
     }
 #else
