@@ -229,9 +229,11 @@ proc_freekerneltable(pagetable_t pagetable, uint64 sz)
 void
 proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
+  printf("begin proc_freepagetable\n");
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmfree(pagetable, sz);
+  printf("end proc_freepagetable\n");
 }
 
 // a user program that calls exec("/init")
