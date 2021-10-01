@@ -22,7 +22,6 @@ static void freeproc(struct proc *p);
 extern char trampoline[]; // trampoline.S
 
 //for lab usertests
-extern char etext[];  // kernel.ld sets this to end of kernel code.
 extern pagetable_t kernel_pagetable;
 
 // initialize the proc table at boot time.
@@ -143,6 +142,8 @@ found:
     kvmmap(p->keanelpagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
     p->kstack = va;
 
+    // vmprint(p->keanelpagetable);
+
 
 
   // Set up new context to start executing at forkret,
@@ -178,40 +179,6 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
-}
-
-// Create a kernel page table for a given process
-pagetable_t
-proc_kerneltable()
-{
-  pagetable_t kernel_tlb;
-
-  kernel_tlb = (pagetable_t) kalloc();
-  memset(kernel_tlb, 0, PGSIZE);
-
-  // uart registers
-  kvmmap(kernel_tlb, UART0, UART0, PGSIZE, PTE_R | PTE_W);
-
-  // virtio mmio disk interface
-  kvmmap(kernel_tlb, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
-
-  // CLINT
-  kvmmap(kernel_tlb, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
-
-  // PLIC
-  kvmmap(kernel_tlb, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
-
-  // map kernel text executable and read-only.
-  kvmmap(kernel_tlb, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
-
-  // map kernel data and the physical RAM we'll make use of.
-  kvmmap(kernel_tlb, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
-
-  // map the trampoline for trap entry/exit to
-  // the highest virtual address in the kernel.
-  kvmmap(kernel_tlb, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
-
-  return kernel_tlb;
 }
 
 // Create a user page table for a given process,
