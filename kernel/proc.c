@@ -138,7 +138,8 @@ found:
    char *pa = kalloc();
       if(pa == 0)
         panic("kalloc");
-    uint64 va = KSTACK((int) (p - proc));
+    // uint64 va = KSTACK((int) (p - proc));
+    uint64 va = KSTACK(0);
     kvmmap(p->keanelpagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
     p->kstack = va;
 

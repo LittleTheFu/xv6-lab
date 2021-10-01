@@ -344,49 +344,53 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   return newsz;
 }
 
-// Recursively free page-table pages.
-// All leaf mappings must already have been removed.
-void freewalk(pagetable_t pagetable, int freeleaf)
+void kernelfreewalk(pagetable_t pagetable)
 {
-  printf("begin freewalk\n");
-  // vmprint(pagetable);
-
   // there are 2^9 = 512 PTEs in a page table.
   for (int i = 0; i < 512; i++)
   {
-    // printf("index %d\n", i);
+    pte_t pte = pagetable[i];
+    if (pte & PTE_V)
+    {
+      if(pte & (PTE_R | PTE_W | PTE_X))
+      {
+        // this PTE points to a lower-level page table.
+        uint64 child = PTE2PA(pte);
+        kernelfreewalk((pagetable_t)child);
+        pagetable[i] = 0;
+      }
+      else
+      {
+        pagetable[i] = 0;
+      }
+    }
+  }
+
+    kfree((void *)pagetable);
+  }
+
+// Recursively free page-table pages.
+// All leaf mappings must already have been removed.
+void freewalk(pagetable_t pagetable)
+{
+  // there are 2^9 = 512 PTEs in a page table.
+  for (int i = 0; i < 512; i++)
+  {
     pte_t pte = pagetable[i];
     if ((pte & PTE_V) && (pte & (PTE_R | PTE_W | PTE_X)) == 0)
     {
       // this PTE points to a lower-level page table.
       uint64 child = PTE2PA(pte);
-      freewalk((pagetable_t)child, freeleaf);
+      freewalk((pagetable_t)child);
       pagetable[i] = 0;
-
-      // kfree((void *)pagetable);
     }
     else if (pte & PTE_V)
     {
-      // if (freeleaf)
-      //   kfree((void *)pagetable);
-
-      // panic("freewalk: leaf");
+      panic("freewalk: leaf");
     }
   }
 
-  if (freeleaf)
-    {
-      if (( *pagetable & PTE_V) && (*pagetable & (PTE_R | PTE_W | PTE_X)) == 0)
-      {
-        kfree((void *)pagetable);
-      }
-    }
-    else
-    {
-      kfree((void *)pagetable);
-    }
-
-  printf("end freewalk\n");
+  kfree((void *)pagetable);
 }
 
 // Free user memory pages,
@@ -396,7 +400,7 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 {
   if(sz > 0)
     uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
-  freewalk(pagetable, 1);
+  freewalk(pagetable);
 }
 
 // Free process kernel memory pages,
@@ -407,7 +411,7 @@ uvmfreewithoutleaf(pagetable_t pagetable, uint64 sz)
   printf("$$$$$$$uvmfreewithoutleaf\n");
   if(sz > 0)
     uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
-  freewalk(pagetable, 0);
+  kernelfreewalk(pagetable);
 }
 
 // Given a parent process's page table, copy
