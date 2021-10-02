@@ -67,6 +67,8 @@ void            ramdiskrw(struct buf*);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
+void printFreeNum();
+
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -91,9 +93,9 @@ void            exit(int);
 int             fork(void);
 int             growproc(int);
 pagetable_t     proc_pagetable(struct proc *);
-pagetable_t     proc_kerneltable();
+pagetable_t     proc_kerneltable(struct proc *);
 void            proc_freepagetable(pagetable_t, uint64);
-void            proc_freekerneltable(pagetable_t, uint64);
+void            proc_freekerneltable(pagetable_t, struct proc *);
 int             kill(int);
 struct cpu*     mycpu(void);
 struct cpu*     getmycpu(void);
@@ -160,11 +162,12 @@ void            uartputc_sync(int);
 int             uartgetc(void);
 
 // vm.c
+pte_t * walk(pagetable_t pagetable, uint64 va, int alloc);
 void            vmprint(pagetable_t pagetable);
 void            kvminit(void);
 void            kvminithart(void);
 uint64          kvmpa(uint64);
-void            kvmmap(pagetable_t, uint64, uint64, uint64, int);
+void            kvmmap(uint64, uint64, uint64, int);
 int             mappages(pagetable_t, uint64, uint64, uint64, int);
 pagetable_t     uvmcreate(void);
 void            uvminit(pagetable_t, uchar *, uint);

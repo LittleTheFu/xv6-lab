@@ -57,66 +57,80 @@ void vmprint(pagetable_t pagetable)
 void
 kvminit()
 {
-  printf("BEGIN : kvm init\n");
+  // printf("BEGIN : kvm init\n");
   kernel_pagetable = (pagetable_t) kalloc();
   memset(kernel_pagetable, 0, PGSIZE);
 
+
   // uart registers
-  kvmmap(kernel_pagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+  kvmmap( UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+    // printf("1 : kvm init\n");
 
   // virtio mmio disk interface
-  kvmmap(kernel_pagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  kvmmap( VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
+// printf("2 : kvm init\n");
   // CLINT
-  kvmmap(kernel_pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  kvmmap( CLINT, CLINT, 0x10000, PTE_R | PTE_W);
 
+// printf("3 : kvm init\n");
   // PLIC
-  kvmmap(kernel_pagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  kvmmap( PLIC, PLIC, 0x400000, PTE_R | PTE_W);
 
+// printf("4 : kvm init\n");
   // map kernel text executable and read-only.
-  kvmmap(kernel_pagetable, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+  kvmmap( KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
 
+// printf("5 : kvm init\n");
   // map kernel data and the physical RAM we'll make use of.
-  kvmmap(kernel_pagetable, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  kvmmap( (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
 
+// printf("6: kvm init\n");
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
-  kvmmap(kernel_pagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  kvmmap( TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 
-    printf("END : kvm init\n");
+    // printf("END : kvm init\n");
 }
 
 // Create a kernel page table for a given process
 pagetable_t
-proc_kerneltable()
+proc_kerneltable(struct proc *p)
 {
+  // printf("begin proc_kerneltable\n");
   pagetable_t kernel_tlb;
 
-  kernel_tlb = (pagetable_t) kalloc();
-  memset(kernel_tlb, 0, PGSIZE);
+  kernel_tlb =uvmcreate();
+  if(kernel_tlb == 0)
+    return 0;
 
   // uart registers
-  kvmmap(kernel_tlb, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+  mappages(kernel_tlb, UART0,PGSIZE,  UART0, PTE_R | PTE_W);
+  // printf("1 proc_kerneltable\n");
 
   // virtio mmio disk interface
-  kvmmap(kernel_tlb, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  mappages(kernel_tlb, VIRTIO0, PGSIZE, VIRTIO0,  PTE_R | PTE_W);
 
+// printf("2 proc_kerneltable\n");
   // CLINT
-  kvmmap(kernel_tlb, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+  mappages(kernel_tlb, CLINT, 0x10000, CLINT, PTE_R | PTE_W);
 
   // PLIC
-  kvmmap(kernel_tlb, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  mappages(kernel_tlb, PLIC,  0x400000, PLIC,PTE_R | PTE_W);
 
   // map kernel text executable and read-only.
-  kvmmap(kernel_tlb, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+  mappages(kernel_tlb, KERNBASE, (uint64)etext-KERNBASE,KERNBASE,  PTE_R | PTE_X);
 
   // map kernel data and the physical RAM we'll make use of.
-  kvmmap(kernel_tlb, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+  mappages(kernel_tlb, (uint64)etext, PHYSTOP-(uint64)etext,(uint64)etext,  PTE_R | PTE_W);
 
+  // mappages(kernel_tlb, TRAPFRAME, PGSIZE,(uint64)(p->trapframe), PTE_R | PTE_W);
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
-  kvmmap(kernel_tlb, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  mappages(kernel_tlb, TRAMPOLINE,PGSIZE, (uint64)trampoline,  PTE_R | PTE_X);
 
+// printf("end proc_kerneltable\n");
   return kernel_tlb;
 }
 
@@ -188,9 +202,9 @@ walkaddr(pagetable_t pagetable, uint64 va)
 // only used when booting.
 // does not flush TLB or enable paging.
 void
-kvmmap(pagetable_t tbl, uint64 va, uint64 pa, uint64 sz, int perm)
+kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 {
-  if(mappages(tbl, va, sz, pa, perm) != 0)
+  if(mappages(kernel_pagetable, va, sz, pa, perm) != 0)
     panic("kvmmap");
 }
 
@@ -346,6 +360,7 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 
 void kernelfreewalk(pagetable_t pagetable)
 {
+  // printf("begin free walk\n");
   // there are 2^9 = 512 PTEs in a page table.
   for (int i = 0; i < 512; i++)
   {
@@ -366,6 +381,7 @@ void kernelfreewalk(pagetable_t pagetable)
     }
   }
 
+  // printf("end free walk\n");
     kfree((void *)pagetable);
   }
 
@@ -408,10 +424,11 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 void
 uvmfreewithoutleaf(pagetable_t pagetable, uint64 sz)
 {
-  printf("$$$$$$$uvmfreewithoutleaf\n");
-  if(sz > 0)
-    uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
+  // printf("begin uvmfreewithoutleaf : %d\n", sz);
+  // if(sz > 0)
+    // uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
   kernelfreewalk(pagetable);
+    // printf("end uvmfreewithoutleaf\n");
 }
 
 // Given a parent process's page table, copy

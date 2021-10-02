@@ -30,6 +30,21 @@ kinit()
   freerange(end, (void*)PHYSTOP);
 }
 
+void printFreeNum()
+{
+    
+  int num = 0;
+    acquire(&kmem.lock);
+    struct run *r  = kmem.freelist;
+    while(r)
+    {
+      r=r->next;
+      num++;
+    }
+    printf("FREE BLOCKS: %d\n", num);
+  release(&kmem.lock);
+}
+
 void
 freerange(void *pa_start, void *pa_end)
 {

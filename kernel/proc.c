@@ -28,7 +28,7 @@ extern pagetable_t kernel_pagetable;
 void
 procinit(void)
 {
-  printf("BEGIN proc init \n");
+  // printf("BEGIN proc init \n");
   struct proc *p;
   
   initlock(&pid_lock, "nextpid");
@@ -38,16 +38,19 @@ procinit(void)
       // Allocate a page for the process's kernel stack.
       // Map it high in memory, followed by an invalid
       // guard page.
-      char *pa = kalloc();
-      if(pa == 0)
-        panic("kalloc");
-      uint64 va = KSTACK((int) (p - proc));
-      kvmmap(kernel_pagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
-      p->kstack = va;
+      // char *pa = kalloc();
+      // if(pa == 0)
+      //   panic("kalloc");
+      // uint64 va = KSTACK((int) (p - proc));
+      // kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      // p->kstack = va;
   }
   kvminithart();
   // vmprint(kernel_pagetable);
-  printf("END proc init \n");
+  // printf("END proc init \n");
+  // struct sysinfo *info;
+  //  sysinfo (info);
+  //  printf("MEM: %d", info->freeram);
 }
 
 // Must be called with interrupts disabled,
@@ -98,7 +101,7 @@ allocpid() {
 static struct proc*
 allocproc(void)
 {
-  printf("BEGIN allocproc\n");
+  // printf("BEGIN allocproc\n");
   struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++) {
@@ -112,7 +115,11 @@ allocproc(void)
   return 0;
 
 found:
+
   p->pid = allocpid();
+
+  printf("begin alloc proc : %d ", p->pid);
+printFreeNum();
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -128,20 +135,33 @@ found:
     return 0;
   }
 
-  p->keanelpagetable = proc_kerneltable();
-  if(p->pagetable == 0){
+  p->keanelpagetable = proc_kerneltable(p);
+  if(p->keanelpagetable == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
   }
 
+// printf("begin stack\n");
+// printf("@@@@@@\n");
+        // printFreeNum();
+
    char *pa = kalloc();
       if(pa == 0)
-        panic("kalloc");
-    // uint64 va = KSTACK((int) (p - proc));
-    uint64 va = KSTACK(0);
-    kvmmap(p->keanelpagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      {
+        printFreeNum();
+        panic("stack kalloc");
+      }
+    uint64 va = KSTACK((int) (p - proc));
+    
+    mappages(p->keanelpagetable, va, PGSIZE, (uint64)pa,  PTE_R | PTE_W);
     p->kstack = va;
+
+    // printf("&&&\n");
+            // printFreeNum();
+
+
+    // printf("end stack\n");
 
     // vmprint(p->keanelpagetable);
 
@@ -153,7 +173,7 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
-  printf("END allocproc\n");
+  // printf("END allocproc\n");
 
   return p;
 }
@@ -164,13 +184,33 @@ found:
 static void
 freeproc(struct proc *p)
 {
-  if(p->trapframe)
-    kfree((void*)p->trapframe);
+  if (p->trapframe)
+    kfree((void *)p->trapframe);
   p->trapframe = 0;
-  if(p->pagetable)
+
+  if (p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
-  if(p->keanelpagetable)
-    proc_freekerneltable(p->keanelpagetable, p->sz);
+  p->pagetable=0;
+
+  if (p->kstack)
+  {
+    pte_t *pte = walk(p->keanelpagetable, p->kstack, 0);
+    if (pte == 0)
+    {
+      panic("error : free stack");
+    }
+    kfree((void *)PTE2PA(*pte));
+  }
+  p->kstack = 0;
+
+  if (p->keanelpagetable)
+    proc_freekerneltable(p->keanelpagetable, p);
+  p->keanelpagetable = 0;
+
+  printf("END alloc proc : %d ", p->pid);
+  printFreeNum();
+  printf("\n");
+
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -218,11 +258,18 @@ proc_pagetable(struct proc *p)
 // Free a process's page table, and free the
 // physical memory it refers to.
 void
-proc_freekerneltable(pagetable_t pagetable, uint64 sz)
+proc_freekerneltable(pagetable_t pagetable, struct proc *p)
 {
-  uvmunmap(pagetable, TRAMPOLINE, 1, 0);
-  uvmunmap(pagetable, TRAPFRAME, 1, 0);
-  uvmfreewithoutleaf(pagetable, sz);
+  // if(p->trapframe)
+  // {
+  //   kfree((void*)p->trapframe);
+  //   p->trapframe=0;
+  // }
+
+  
+  // uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+  // uvmunmap(pagetable, TRAPFRAME, 1, 0);
+  uvmfreewithoutleaf(pagetable, 100);
 }
 
 // Free a process's page table, and free the
@@ -230,11 +277,11 @@ proc_freekerneltable(pagetable_t pagetable, uint64 sz)
 void
 proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
-  printf("begin proc_freepagetable\n");
+  // printf("begin proc_freepagetable\n");
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmfree(pagetable, sz);
-  printf("end proc_freepagetable\n");
+  // printf("end proc_freepagetable\n");
 }
 
 // a user program that calls exec("/init")
