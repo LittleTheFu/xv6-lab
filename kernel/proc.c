@@ -118,8 +118,8 @@ found:
 
   p->pid = allocpid();
 
-  printf("begin alloc proc : %d ", p->pid);
-printFreeNum();
+//   printf("begin alloc proc : %d ", p->pid);
+// printFreeNum();
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -127,8 +127,8 @@ printFreeNum();
     return 0;
   }
 
-  printf("p->trapframe done : %d ", p->pid);
-  printFreeNum();
+  // printf("p->trapframe done : %d ", p->pid);
+  // printFreeNum();
 
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
@@ -137,8 +137,8 @@ printFreeNum();
     release(&p->lock);
     return 0;
   }
-  printf("user page done : %d ", p->pid);
-  printFreeNum();
+  // printf("user page done : %d ", p->pid);
+  // printFreeNum();
 
 
 // printf("p->keanelpagetable: %p\n", p->keanelpagetable);
@@ -151,8 +151,8 @@ printFreeNum();
     return 0;
   }
 
-  printf("kernel page done : %d ", p->pid);
-  printFreeNum();
+  // printf("kernel page done : %d ", p->pid);
+  // printFreeNum();
 
 // printf("begin stack\n");
 // printf("@@@@@@\n");
@@ -161,7 +161,7 @@ printFreeNum();
    char *pa = kalloc();
       if(pa == 0)
       {
-        printFreeNum();
+        // printFreeNum();
         panic("stack kalloc");
       }
     uint64 va = KSTACK((int) (p - proc));
@@ -169,8 +169,8 @@ printFreeNum();
     mappages(p->keanelpagetable, va, PGSIZE, (uint64)pa,  PTE_R | PTE_W);
     p->kstack = va;
 
-printf("stack done : %d ", p->pid);
-  printFreeNum();
+// printf("stack done : %d ", p->pid);
+//   printFreeNum();
     // printf("&&&\n");
             // printFreeNum();
 
@@ -188,8 +188,8 @@ printf("stack done : %d ", p->pid);
   p->context.sp = p->kstack + PGSIZE;
 
   // printf("END allocproc\n");
-    printf("END alloc proc : %d ", p->pid);
-  printFreeNum();
+  //   printf("END alloc proc : %d ", p->pid);
+  // printFreeNum();
 
   return p;
 }
@@ -200,23 +200,23 @@ printf("stack done : %d ", p->pid);
 static void
 freeproc(struct proc *p)
 {
-  printf("-------------------------------------\n");
-  printf("0 free : %d ", p->pid);
-  printFreeNum();
+  // printf("-------------------------------------\n");
+  // printf("0 free : %d ", p->pid);
+  // printFreeNum();
 
   if (p->trapframe)
     kfree((void *)p->trapframe);
   p->trapframe = 0;
 
-  printf("1 trap free done : %d ", p->pid);
-  printFreeNum();
+  // printf("1 trap free done : %d ", p->pid);
+  // printFreeNum();
 
   if (p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable=0;
 
-  printf("2 user free done : %d ", p->pid);
-  printFreeNum();
+  // printf("2 user free done : %d ", p->pid);
+  // printFreeNum();
 
   if (p->kstack)
   {
@@ -229,19 +229,19 @@ freeproc(struct proc *p)
   }
   p->kstack = 0;
 
-  printf("3 stack free done : %d ", p->pid);
-  printFreeNum();
+  // printf("3 stack free done : %d ", p->pid);
+  // printFreeNum();
 
   if (p->keanelpagetable)
     proc_freekerneltable(p->keanelpagetable, p);
   p->keanelpagetable = 0;
 
-  printf("4 kernel free done : %d ", p->pid);
-  printFreeNum();
+  // printf("4 kernel free done : %d ", p->pid);
+  // printFreeNum();
 
-  printf("END free proc : %d ", p->pid);
-  printFreeNum();
-  printf("\n\n\n");
+  // printf("END free proc : %d ", p->pid);
+  // printFreeNum();
+  // printf("\n\n\n");
 
   p->pagetable = 0;
   p->sz = 0;
@@ -605,6 +605,9 @@ scheduler(void)
         c->proc = 0;
 
         found = 1;
+
+                kvminithart();
+
       }
       release(&p->lock);
     }
@@ -618,7 +621,7 @@ scheduler(void)
 #if !defined (LAB_FS)
     if(found == 0) {
       intr_on();
-      kvminithart();
+      // kvminithart();
       asm volatile("wfi");
     }
 #else
