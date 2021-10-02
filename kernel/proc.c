@@ -127,6 +127,9 @@ printFreeNum();
     return 0;
   }
 
+  printf("p->trapframe done : %d ", p->pid);
+  printFreeNum();
+
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
@@ -134,13 +137,19 @@ printFreeNum();
     release(&p->lock);
     return 0;
   }
+  printf("user page done : %d ", p->pid);
+  printFreeNum();
 
   p->keanelpagetable = proc_kerneltable(p);
+  proc_kerneltable(p);
   if(p->keanelpagetable == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
   }
+
+  printf("kernel page done : %d ", p->pid);
+  printFreeNum();
 
 // printf("begin stack\n");
 // printf("@@@@@@\n");
@@ -157,6 +166,8 @@ printFreeNum();
     mappages(p->keanelpagetable, va, PGSIZE, (uint64)pa,  PTE_R | PTE_W);
     p->kstack = va;
 
+printf("stack done : %d ", p->pid);
+  printFreeNum();
     // printf("&&&\n");
             // printFreeNum();
 
@@ -174,6 +185,8 @@ printFreeNum();
   p->context.sp = p->kstack + PGSIZE;
 
   // printf("END allocproc\n");
+    printf("END alloc proc : %d ", p->pid);
+  printFreeNum();
 
   return p;
 }
@@ -184,13 +197,23 @@ printFreeNum();
 static void
 freeproc(struct proc *p)
 {
+  printf("-------------------------------------\n");
+  printf("0 free : %d ", p->pid);
+  printFreeNum();
+
   if (p->trapframe)
     kfree((void *)p->trapframe);
   p->trapframe = 0;
 
+  printf("1 trap free done : %d ", p->pid);
+  printFreeNum();
+
   if (p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable=0;
+
+  printf("2 user free done : %d ", p->pid);
+  printFreeNum();
 
   if (p->kstack)
   {
@@ -203,13 +226,19 @@ freeproc(struct proc *p)
   }
   p->kstack = 0;
 
+  printf("3 stack free done : %d ", p->pid);
+  printFreeNum();
+
   if (p->keanelpagetable)
     proc_freekerneltable(p->keanelpagetable, p);
   p->keanelpagetable = 0;
 
-  printf("END alloc proc : %d ", p->pid);
+  printf("4 kernel free done : %d ", p->pid);
   printFreeNum();
-  printf("\n");
+
+  printf("END free proc : %d ", p->pid);
+  printFreeNum();
+  printf("\n\n\n");
 
   p->pagetable = 0;
   p->sz = 0;

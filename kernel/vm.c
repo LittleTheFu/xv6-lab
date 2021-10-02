@@ -367,7 +367,7 @@ void kernelfreewalk(pagetable_t pagetable)
     pte_t pte = pagetable[i];
     if (pte & PTE_V)
     {
-      if(pte & (PTE_R | PTE_W | PTE_X))
+      if ((pte & (PTE_R | PTE_W | PTE_X)) == 0)
       {
         // this PTE points to a lower-level page table.
         uint64 child = PTE2PA(pte);
@@ -380,10 +380,9 @@ void kernelfreewalk(pagetable_t pagetable)
       }
     }
   }
-
   // printf("end free walk\n");
-    kfree((void *)pagetable);
-  }
+  kfree((void *)pagetable);
+}
 
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
