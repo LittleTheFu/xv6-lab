@@ -140,7 +140,10 @@ printFreeNum();
   printf("user page done : %d ", p->pid);
   printFreeNum();
 
-  p->keanelpagetable = proc_kerneltable(p);
+
+// printf("p->keanelpagetable: %p\n", p->keanelpagetable);
+  // p->keanelpagetable = proc_kerneltable(p);
+  // proc_kerneltable(p);
   proc_kerneltable(p);
   if(p->keanelpagetable == 0){
     freeproc(p);

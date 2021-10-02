@@ -57,7 +57,9 @@ void vmprint(pagetable_t pagetable)
 void
 kvminit()
 {
-  // printf("BEGIN : kvm init\n");
+  printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+  printf("BEGIN : kvm init\n");
+  printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   kernel_pagetable = (pagetable_t) kalloc();
   memset(kernel_pagetable, 0, PGSIZE);
 
@@ -99,39 +101,41 @@ pagetable_t
 proc_kerneltable(struct proc *p)
 {
   // printf("begin proc_kerneltable\n");
-  pagetable_t kernel_tlb;
+  // pagetable_t kernel_tlb;
 
-  kernel_tlb =uvmcreate();
-  if(kernel_tlb == 0)
-    return 0;
+  p->keanelpagetable = uvmcreate();
+  // kernel_tlb =uvmcreate();
+  // if(kernel_tlb == 0)
+  //   return 0;
 
   // uart registers
-  mappages(kernel_tlb, UART0,PGSIZE,  UART0, PTE_R | PTE_W);
+  mappages(p->keanelpagetable, UART0,PGSIZE,  UART0, PTE_R | PTE_W);
   // printf("1 proc_kerneltable\n");
 
   // virtio mmio disk interface
-  mappages(kernel_tlb, VIRTIO0, PGSIZE, VIRTIO0,  PTE_R | PTE_W);
+  mappages(p->keanelpagetable, VIRTIO0, PGSIZE, VIRTIO0,  PTE_R | PTE_W);
 
 // printf("2 proc_kerneltable\n");
   // CLINT
-  mappages(kernel_tlb, CLINT, 0x10000, CLINT, PTE_R | PTE_W);
+  mappages(p->keanelpagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W);
 
   // PLIC
-  mappages(kernel_tlb, PLIC,  0x400000, PLIC,PTE_R | PTE_W);
+  mappages(p->keanelpagetable, PLIC,  0x400000, PLIC,PTE_R | PTE_W);
 
   // map kernel text executable and read-only.
-  mappages(kernel_tlb, KERNBASE, (uint64)etext-KERNBASE,KERNBASE,  PTE_R | PTE_X);
+  mappages(p->keanelpagetable, KERNBASE, (uint64)etext-KERNBASE,KERNBASE,  PTE_R | PTE_X);
 
   // map kernel data and the physical RAM we'll make use of.
-  mappages(kernel_tlb, (uint64)etext, PHYSTOP-(uint64)etext,(uint64)etext,  PTE_R | PTE_W);
+  mappages(p->keanelpagetable, (uint64)etext, PHYSTOP-(uint64)etext,(uint64)etext,  PTE_R | PTE_W);
 
   // mappages(kernel_tlb, TRAPFRAME, PGSIZE,(uint64)(p->trapframe), PTE_R | PTE_W);
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
-  mappages(kernel_tlb, TRAMPOLINE,PGSIZE, (uint64)trampoline,  PTE_R | PTE_X);
+  mappages(p->keanelpagetable, TRAMPOLINE,PGSIZE, (uint64)trampoline,  PTE_R | PTE_X);
 
 // printf("end proc_kerneltable\n");
-  return kernel_tlb;
+  // return kernel_tlb;
+  return 0;
 }
 
 // Switch h/w page table register to the kernel's page table,
@@ -358,6 +362,20 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   return newsz;
 }
 
+// void kernelfreewalk(pagetable_t pagetable) {
+//   for(int i = 0; i < 512; i++) {
+//     pte_t pte = pagetable[i];
+//     // this PTE points to a lower-level pagetable 
+//     if(PTE_FLAGS(pte) == PTE_V) {
+//       kernelfreewalk((pagetable_t)PTE2PA(pte));
+//       pagetable[i] = 0;
+//     } else if(pte & PTE_V) {
+//       pagetable[i] = 0;
+//     }
+//   }
+//   kfree(pagetable);
+// }
+
 void kernelfreewalk(pagetable_t pagetable)
 {
   // printf("begin free walk\n");
@@ -371,12 +389,8 @@ void kernelfreewalk(pagetable_t pagetable)
       {
         // this PTE points to a lower-level page table.
         uint64 child = PTE2PA(pte);
+        pagetable[i] = 0;
         kernelfreewalk((pagetable_t)child);
-        pagetable[i] = 0;
-      }
-      else
-      {
-        pagetable[i] = 0;
       }
     }
   }
