@@ -254,6 +254,50 @@ freeproc(struct proc *p)
   p->state = UNUSED;
 }
 
+// Create a kernel page table for a given process
+pagetable_t
+proc_kerneltable(struct proc *p)
+{
+  extern char etext[];  // kernel.ld sets this to end of kernel code.
+
+  // printf("begin proc_kerneltable\n");
+  // pagetable_t kernel_tlb;
+
+  p->keanelpagetable = uvmcreate();
+  // kernel_tlb =uvmcreate();
+  // if(kernel_tlb == 0)
+  //   return 0;
+
+  // uart registers
+  mappages(p->keanelpagetable, UART0,PGSIZE,  UART0, PTE_R | PTE_W);
+  // printf("1 proc_kerneltable\n");
+
+  // virtio mmio disk interface
+  mappages(p->keanelpagetable, VIRTIO0, PGSIZE, VIRTIO0,  PTE_R | PTE_W);
+
+// printf("2 proc_kerneltable\n");
+  // CLINT
+  mappages(p->keanelpagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W);
+
+  // PLIC
+  mappages(p->keanelpagetable, PLIC,  0x400000, PLIC,PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  mappages(p->keanelpagetable, KERNBASE, (uint64)etext-KERNBASE,KERNBASE,  PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  mappages(p->keanelpagetable, (uint64)etext, PHYSTOP-(uint64)etext,(uint64)etext,  PTE_R | PTE_W);
+
+  // mappages(kernel_tlb, TRAPFRAME, PGSIZE,(uint64)(p->trapframe), PTE_R | PTE_W);
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  mappages(p->keanelpagetable, TRAMPOLINE,PGSIZE, (uint64)trampoline,  PTE_R | PTE_X);
+
+// printf("end proc_kerneltable\n");
+  // return kernel_tlb;
+  return 0;
+}
+
 // Create a user page table for a given process,
 // with no user memory, but with trampoline pages.
 pagetable_t
@@ -603,25 +647,16 @@ scheduler(void)
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
-
         found = 1;
 
-                kvminithart();
-
+        kvminithart();
       }
       release(&p->lock);
     }
 
-    // if(found == 0)
-    // {
-    //     w_satp(MAKE_SATP(p->keanelpagetable));
-    //     sfence_vma();
-    // }
-
 #if !defined (LAB_FS)
     if(found == 0) {
       intr_on();
-      // kvminithart();
       asm volatile("wfi");
     }
 #else
