@@ -413,11 +413,13 @@ growproc(int n)
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
+  kuvmcopy(p->pagetable, p->keanelpagetable, p->sz, sz);
+
   } else if(n < 0){
+    kuvmfree(p->pagetable,sz+n, sz);
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
-  kuvmcopy(p->pagetable, p->keanelpagetable, 0, p->sz);
   return 0;
 }
 

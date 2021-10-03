@@ -180,6 +180,7 @@ uint64          uvmdealloc(pagetable_t, uint64, uint64);
 #ifdef SOL_COW
 #else
 void         kuvmcopy(pagetable_t old, pagetable_t new, uint64 start, uint64 end);
+void kuvmfree(pagetable_t pagetable, uint64 start, uint64 end);
 int             uvmcopy(pagetable_t, pagetable_t, uint64);
 #endif
 void            uvmfree(pagetable_t, uint64);

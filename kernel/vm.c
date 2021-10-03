@@ -417,6 +417,17 @@ kuvmcopy(pagetable_t old, pagetable_t new, uint64 start, uint64 end)
   }
 }
 
+void kuvmfree(pagetable_t pagetable, uint64 start, uint64 end)
+{
+  if (start < end)
+    return;
+
+  uint startPage = PGROUNDUP(start);
+  uint endPage = PGROUNDUP(end);
+  uint num = endPage - startPage;
+  uvmunmap(pagetable, startPage, num, 0); 
+}
+
 // Given a parent process's page table, copy
 // its memory into a child's page table.
 // Copies both the page table and the
