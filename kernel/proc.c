@@ -28,7 +28,6 @@ extern pagetable_t kernel_pagetable;
 void
 procinit(void)
 {
-  // printf("BEGIN proc init \n");
   struct proc *p;
   
   initlock(&pid_lock, "nextpid");
@@ -141,11 +140,11 @@ found:
   // printFreeNum();
 
 
-// printf("p->keanelpagetable: %p\n", p->keanelpagetable);
-  // p->keanelpagetable = proc_kerneltable(p);
+// printf("p->kernelpagetable: %p\n", p->kernelpagetable);
+  // p->kernelpagetable = proc_kerneltable(p);
   // proc_kerneltable(p);
   proc_kerneltable(p);
-  if(p->keanelpagetable == 0){
+  if(p->kernelpagetable == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
@@ -166,7 +165,7 @@ found:
       }
     uint64 va = KSTACK((int) (p - proc));
     
-    mappages(p->keanelpagetable, va, PGSIZE, (uint64)pa,  PTE_R | PTE_W);
+    mappages(p->kernelpagetable, va, PGSIZE, (uint64)pa,  PTE_R | PTE_W);
     p->kstack = va;
 
 // printf("stack done : %d ", p->pid);
@@ -177,7 +176,7 @@ found:
 
     // printf("end stack\n");
 
-    // vmprint(p->keanelpagetable);
+    // vmprint(p->kernelpagetable);
 
 
 
@@ -220,7 +219,7 @@ freeproc(struct proc *p)
 
   if (p->kstack)
   {
-    pte_t *pte = walk(p->keanelpagetable, p->kstack, 0);
+    pte_t *pte = walk(p->kernelpagetable, p->kstack, 0);
     if (pte == 0)
     {
       panic("error : free stack");
@@ -232,9 +231,9 @@ freeproc(struct proc *p)
   // printf("3 stack free done : %d ", p->pid);
   // printFreeNum();
 
-  if (p->keanelpagetable)
-    proc_freekerneltable(p->keanelpagetable, p);
-  p->keanelpagetable = 0;
+  if (p->kernelpagetable)
+    proc_freekerneltable(p->kernelpagetable, p);
+  p->kernelpagetable = 0;
 
   // printf("4 kernel free done : %d ", p->pid);
   // printFreeNum();
@@ -263,35 +262,35 @@ proc_kerneltable(struct proc *p)
   // printf("begin proc_kerneltable\n");
   // pagetable_t kernel_tlb;
 
-  p->keanelpagetable = uvmcreate();
+  p->kernelpagetable = uvmcreate();
   // kernel_tlb =uvmcreate();
   // if(kernel_tlb == 0)
   //   return 0;
 
   // uart registers
-  mappages(p->keanelpagetable, UART0,PGSIZE,  UART0, PTE_R | PTE_W);
+  mappages(p->kernelpagetable, UART0,PGSIZE,  UART0, PTE_R | PTE_W);
   // printf("1 proc_kerneltable\n");
 
   // virtio mmio disk interface
-  mappages(p->keanelpagetable, VIRTIO0, PGSIZE, VIRTIO0,  PTE_R | PTE_W);
+  mappages(p->kernelpagetable, VIRTIO0, PGSIZE, VIRTIO0,  PTE_R | PTE_W);
 
 // printf("2 proc_kerneltable\n");
   // CLINT
-  mappages(p->keanelpagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W);
+  mappages(p->kernelpagetable, CLINT, 0x10000, CLINT, PTE_R | PTE_W);
 
   // PLIC
-  mappages(p->keanelpagetable, PLIC,  0x400000, PLIC,PTE_R | PTE_W);
+  mappages(p->kernelpagetable, PLIC,  0x400000, PLIC,PTE_R | PTE_W);
 
   // map kernel text executable and read-only.
-  mappages(p->keanelpagetable, KERNBASE, (uint64)etext-KERNBASE,KERNBASE,  PTE_R | PTE_X);
+  mappages(p->kernelpagetable, KERNBASE, (uint64)etext-KERNBASE,KERNBASE,  PTE_R | PTE_X);
 
   // map kernel data and the physical RAM we'll make use of.
-  mappages(p->keanelpagetable, (uint64)etext, PHYSTOP-(uint64)etext,(uint64)etext,  PTE_R | PTE_W);
+  mappages(p->kernelpagetable, (uint64)etext, PHYSTOP-(uint64)etext,(uint64)etext,  PTE_R | PTE_W);
 
   // mappages(kernel_tlb, TRAPFRAME, PGSIZE,(uint64)(p->trapframe), PTE_R | PTE_W);
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
-  mappages(p->keanelpagetable, TRAMPOLINE,PGSIZE, (uint64)trampoline,  PTE_R | PTE_X);
+  mappages(p->kernelpagetable, TRAMPOLINE,PGSIZE, (uint64)trampoline,  PTE_R | PTE_X);
 
 // printf("end proc_kerneltable\n");
   // return kernel_tlb;
@@ -395,7 +394,7 @@ userinit(void)
 
   p->state = RUNNABLE;
 
-  kuvmcopy(p->pagetable, p->keanelpagetable, 0, p->sz);
+  kuvmcopy(p->pagetable, p->kernelpagetable, 0, p->sz);
 
   release(&p->lock);
 }
@@ -413,7 +412,7 @@ growproc(int n)
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
-  kuvmcopy(p->pagetable, p->keanelpagetable, p->sz, sz);
+  kuvmcopy(p->pagetable, p->kernelpagetable, p->sz, sz);
 
   } else if(n < 0){
     kuvmfree(p->pagetable,sz+n, sz);
@@ -445,7 +444,7 @@ fork(void)
   }
   np->sz = p->sz;
 
-  kuvmcopy(np->pagetable, np->keanelpagetable, 0, np->sz);
+  kuvmcopy(np->pagetable, np->kernelpagetable, 0, np->sz);
 
   np->parent = p;
 
@@ -646,7 +645,7 @@ scheduler(void)
         p->state = RUNNING;
         c->proc = p;
 
-        w_satp(MAKE_SATP(p->keanelpagetable));
+        w_satp(MAKE_SATP(p->kernelpagetable));
         sfence_vma();
 
         swtch(&c->context, &p->context);
