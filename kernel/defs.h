@@ -99,7 +99,7 @@ int             growproc(int);
 pagetable_t     proc_pagetable(struct proc *);
 pagetable_t     proc_kerneltable(struct proc *);
 void            proc_freepagetable(pagetable_t, uint64);
-void            proc_freekerneltable(pagetable_t, struct proc *);
+void            proc_freekerneltable(pagetable_t);
 int             kill(int);
 struct cpu*     mycpu(void);
 struct cpu*     getmycpu(void);
@@ -166,8 +166,9 @@ void            uartputc_sync(int);
 int             uartgetc(void);
 
 // vm.c
-pte_t * walk(pagetable_t pagetable, uint64 va, int alloc);
-void            vmprint(pagetable_t pagetable);
+void kernelfreewalk(pagetable_t);
+pte_t *walk(pagetable_t, uint64, int);
+void vmprint(pagetable_t);
 void            kvminit(void);
 void            kvminithart(void);
 uint64          kvmpa(uint64);
@@ -184,7 +185,6 @@ void kuvmfree(pagetable_t pagetable, uint64 start, uint64 end);
 int             uvmcopy(pagetable_t, pagetable_t, uint64);
 #endif
 void            uvmfree(pagetable_t, uint64);
-void            uvmfreewithoutleaf(pagetable_t, uint64);
 void            uvmunmap(pagetable_t, uint64, uint64, int);
 void            uvmclear(pagetable_t, uint64);
 uint64          walkaddr(pagetable_t, uint64);
