@@ -395,6 +395,8 @@ userinit(void)
 
   p->state = RUNNABLE;
 
+  kuvmcopy(p->pagetable, p->keanelpagetable, 0, p->sz);
+
   release(&p->lock);
 }
 
@@ -415,6 +417,7 @@ growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  kuvmcopy(p->pagetable, p->keanelpagetable, 0, p->sz);
   return 0;
 }
 
@@ -439,6 +442,8 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+
+  kuvmcopy(np->pagetable, np->keanelpagetable, 0, np->sz);
 
   np->parent = p;
 
