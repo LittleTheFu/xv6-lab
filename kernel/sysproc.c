@@ -107,7 +107,7 @@ uint64 sys_sigalarm()
   if(argint(0, &interval) < 0)
     return -1;
 
-  printf("#####%d\n", interval);
+  // printf("#####%d\n", interval);
 
   if(argaddr(1, &func) < 0)
       return -1;

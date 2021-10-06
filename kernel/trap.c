@@ -83,7 +83,7 @@ usertrap(void)
     if(p->tick_count >= p->interval)
     {
       p->tick_count = 0;
-      p->handler();
+      p->trapframe->epc = (uint64)p->handler;
     }
     yield();
   }
