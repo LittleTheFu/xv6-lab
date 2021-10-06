@@ -115,10 +115,18 @@ uint64 sys_sigalarm()
   myproc()->interval = interval;
   myproc()->handler = (void*)func;
 
+  myproc()->tick_handle_is_busy = 0;
+
   return 0;
 }
 
 uint64 sys_sigreturn()
 {
+  if( myproc()->tick_handle_is_busy == 1)
+  {
+    myproc()->tick_handle_is_busy = 0;
+    memmove(myproc()->trapframe, &myproc()->tick_frame, sizeof(myproc()->tick_frame));
+  }
+
   return 0;
 }

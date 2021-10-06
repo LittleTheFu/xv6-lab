@@ -152,6 +152,7 @@ freeproc(struct proc *p)
   p->state = UNUSED;
   p->tick_count = 0;
   p->handler = 0;
+  p->tick_handle_is_busy = 0;
 }
 
 // Create a user page table for a given process,

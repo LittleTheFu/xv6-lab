@@ -82,8 +82,14 @@ usertrap(void)
     p->tick_count++;
     if(p->tick_count >= p->interval)
     {
-      p->tick_count = 0;
-      p->trapframe->epc = (uint64)p->handler;
+      if(p->tick_handle_is_busy == 0)
+      {
+        p->tick_handle_is_busy = 1;
+
+        p->tick_frame = (*p->trapframe);
+        p->tick_count = 0;
+        p->trapframe->epc = (uint64)p->handler;
+      }
     }
     yield();
   }

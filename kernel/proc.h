@@ -87,6 +87,8 @@ struct proc {
   int interval;
   void (*handler)();
   int tick_count;
+  struct trapframe tick_frame;
+  int tick_handle_is_busy;
   
   struct spinlock lock;
 
