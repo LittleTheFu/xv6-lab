@@ -113,6 +113,12 @@ found:
     return 0;
   }
 
+  p->interval = 0;
+  p->tick_count = 0;
+  p->tick_handle_is_busy = 0;
+  p->handler = 0;
+  memset(&(p->tick_frame), 0, sizeof(p->tick_frame));
+
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
