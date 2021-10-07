@@ -29,13 +29,12 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
-int flag = 0;
 void lazyalloc()
 {
   uint64 address = r_stval();
   uint64 page_start_address = PGROUNDDOWN(address);
 
-  printf("address:%p|||start:%p\n", address, page_start_address);
+  // printf("address:%p|||start:%p\n", address, page_start_address);
 
   char *mem = kalloc();
   if (mem == 0)
@@ -44,22 +43,11 @@ void lazyalloc()
   }
   memset(mem, 0, PGSIZE);
 
-  // extern pagetable_t kernel_pagetable;
-
-  // pte_t *t = walk(kernel_pagetable, page_start_address, 0);
-  // vmprint(t);
-
-  // vmprint(kernel_pagetable);
-  // printf("\n\n");
-  // if(flag == 0) {
-    int ret = mappages(myproc()->pagetable, page_start_address, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U);
-    printf("ret:%d\n", ret);
-  // }
-  // flag = 1;
-  // vmprint(kernel_pagetable);
-  // mappages(myproc()->pagetable, page_start_address, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U);
-
-  // printf("asfasfasfsa\n");
+  int result = mappages(myproc()->pagetable, page_start_address, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U);
+  if(result != 0)
+  {
+    panic("faild when mapping pages in lazyalloc() \n");
+  }
 }
 
 //
