@@ -29,6 +29,39 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
+int flag = 0;
+void lazyalloc()
+{
+  uint64 address = r_stval();
+  uint64 page_start_address = PGROUNDDOWN(address);
+
+  printf("address:%p|||start:%p\n", address, page_start_address);
+
+  char *mem = kalloc();
+  if (mem == 0)
+  {
+    panic("out of mem in lazyalloc() \n");
+  }
+  memset(mem, 0, PGSIZE);
+
+  extern pagetable_t kernel_pagetable;
+
+  // pte_t *t = walk(kernel_pagetable, page_start_address, 0);
+  // vmprint(t);
+
+  // vmprint(kernel_pagetable);
+  // printf("\n\n");
+  // if(flag == 0) {
+    int ret = mappages(kernel_pagetable, page_start_address, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U);
+    printf("ret:%d\n", ret);
+  // }
+  // flag = 1;
+  // vmprint(kernel_pagetable);
+  // mappages(myproc()->pagetable, page_start_address, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U);
+
+  // printf("asfasfasfsa\n");
+}
+
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
@@ -65,7 +98,12 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } 
+  else if(r_scause() == 13 || r_scause() == 15){
+    lazyalloc();
+      // printf("@@@@@%p\n",r_stval());
+  }
+  else if((which_dev = devintr()) != 0){
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
