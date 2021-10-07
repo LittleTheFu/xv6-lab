@@ -44,7 +44,7 @@ void lazyalloc()
   }
   memset(mem, 0, PGSIZE);
 
-  extern pagetable_t kernel_pagetable;
+  // extern pagetable_t kernel_pagetable;
 
   // pte_t *t = walk(kernel_pagetable, page_start_address, 0);
   // vmprint(t);
@@ -52,7 +52,7 @@ void lazyalloc()
   // vmprint(kernel_pagetable);
   // printf("\n\n");
   // if(flag == 0) {
-    int ret = mappages(kernel_pagetable, page_start_address, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U);
+    int ret = mappages(myproc()->pagetable, page_start_address, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U);
     printf("ret:%d\n", ret);
   // }
   // flag = 1;
