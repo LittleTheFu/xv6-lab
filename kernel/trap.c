@@ -39,14 +39,20 @@ void lazyalloc()
   char *mem = kalloc();
   if (mem == 0)
   {
-    panic("out of mem in lazyalloc() \n");
+    myproc()->killed = 1;
+    // panic("out of mem in lazyalloc() \n");
+    return ;
   }
   memset(mem, 0, PGSIZE);
 
   int result = mappages(myproc()->pagetable, page_start_address, PGSIZE, (uint64)mem, PTE_W | PTE_X | PTE_R | PTE_U);
   if(result != 0)
   {
-    panic("faild when mapping pages in lazyalloc() \n");
+    kfree(mem);
+    myproc()->killed = 1;
+
+    return ;
+    // panic("faild when mapping pages in lazyalloc() \n");
   }
 }
 
@@ -57,6 +63,7 @@ void lazyalloc()
 void
 usertrap(void)
 {
+  uint64 address = r_stval();
   int which_dev = 0;
 
   if((r_sstatus() & SSTATUS_SPP) != 0)
@@ -88,8 +95,14 @@ usertrap(void)
     syscall();
   } 
   else if(r_scause() == 13 || r_scause() == 15){
-    lazyalloc();
-      // printf("@@@@@%p\n",r_stval());
+    if(address > myproc()->sz || address < myproc()->trapframe->sp || address > MAXVA)
+    {
+      myproc()->killed = 1;
+    }
+    else
+    {
+      lazyalloc();
+    }
   }
   else if((which_dev = devintr()) != 0){
     // ok
