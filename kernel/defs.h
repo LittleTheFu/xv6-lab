@@ -145,6 +145,7 @@ void            syscall();
 
 // trap.c
 extern uint     ticks;
+void            alloc_page_mem(pagetable_t,uint64);
 void            trapinit(void);
 void            trapinithart(void);
 extern struct spinlock tickslock;
