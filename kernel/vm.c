@@ -327,37 +327,46 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 // physical memory.
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
-int
-uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
+int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
+
   pte_t *pte;
   uint64 pa, i;
   uint flags;
 
-  for(i = 0; i < sz; i += PGSIZE){
-    if((pte = walk(old, i, 0)) == 0)
+  for (i = 0; i < sz; i += PGSIZE)
+  {
+    if ((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
+    if ((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
 
     pa = PTE2PA(*pte);
     flags = (PTE_FLAGS(*pte));
 
-    if(flags & PTE_W){
+    if (flags & PTE_W)
+    {
+      printf("BEGIN------------------------\n");
+      printFreeNum();
+
       flags &= (~PTE_W);
       flags |= PTE_COW;
 
       (*pte) = PA2PTE(pa) | flags;
     }
 
-     if(mappages(new, i, PGSIZE, pa, flags) != 0){
+    if (mappages(new, i, PGSIZE, pa, flags) != 0)
+    {
       goto err;
     }
+
+    printFreeNum();
+    printf("END------------------------\n");
   }
 
   return 0;
 
- err:
+err:
   uvmunmap(new, 0, i / PGSIZE, 1);
   printf("ERROR\n");
   return -1;

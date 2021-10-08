@@ -51,7 +51,9 @@ void alloc_page_mem(pagetable_t table_me, pagetable_t table_that, uint64 va)
     return ;
   }
 
-  printf("BEGIN\n");
+  // printf("BEGIN-----------------\n");
+  // printFreeNum();
+
   if ((mem = kalloc()) == 0)
   {
     panic("failed: alloc mem in alloc_page_mem\n");
@@ -77,7 +79,8 @@ void alloc_page_mem(pagetable_t table_me, pagetable_t table_that, uint64 va)
   uint64 new_pa = (uint64)mem;
   (*pte_me) = PA2PTE(new_pa) | flag;
 
-  printf("END\n");
+  // printFreeNum();
+  // printf("END------------------------\n");
 
   // uint64 base_va = PGROUNDDOWN(va);
   // if (mappages(table_me, va, PGSIZE, (uint64)mem, flag) == 0)
