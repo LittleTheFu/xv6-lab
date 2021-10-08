@@ -8,4 +8,4 @@ traps --- done
 
 lazy --- done
 
-cow --- usertests not passed
+cow --- [cowtest passed] [usertests not passed]
