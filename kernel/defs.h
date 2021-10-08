@@ -65,7 +65,7 @@ void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
 void            kinc(void *);
-void            kdec(void *);
+// void            kdec(void *);
 
 
 // log.c

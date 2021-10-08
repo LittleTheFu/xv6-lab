@@ -76,6 +76,8 @@ void alloc_page_mem(pagetable_t pagetable, uint64 va)
   uint64 new_pa = (uint64)mem;
   (*pte_me) = PA2PTE(new_pa) | flag;
 
+  kfree((void*)pa);
+
   // printFreeNum();
   // printf("END------------------------\n");
 
