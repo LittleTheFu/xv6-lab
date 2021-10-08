@@ -167,6 +167,28 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   return 0;
 }
 
+int
+cow_mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
+{
+  uint64 a, last;
+  pte_t *pte;
+
+  a = PGROUNDDOWN(va);
+  last = PGROUNDDOWN(va + size - 1);
+  for(;;){
+    if((pte = walk(pagetable, a, 0)) == 0)
+      return -1;
+    if(*pte & PTE_V)
+      panic("remap");
+    *pte = PA2PTE(pa) | perm | PTE_V;
+    if(a == last)
+      break;
+    a += PGSIZE;
+    pa += PGSIZE;
+  }
+  return 0;
+}
+
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.
@@ -311,9 +333,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  // char *mem;
 
-  printf("BEGIN\n");
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
@@ -321,26 +341,20 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: page not present");
 
     pa = PTE2PA(*pte);
-    flags = (PTE_FLAGS(*pte) & (~PTE_W));
-    printf("MID1\n");
+    flags = (PTE_FLAGS(*pte));
+
+    if(flags & PTE_W){
+      flags &= (~PTE_W);
+      flags |= PTE_COW;
+
+      (*pte) = PA2PTE(pa) | flags;
+    }
+
      if(mappages(new, i, PGSIZE, pa, flags) != 0){
       goto err;
     }
-    printf("MID2\n");
-    if(mappages(old, i, PGSIZE, pa, flags) != 0){
-      goto err;
-    }
-    printf("MID3\n");
-
-    // if((mem = kalloc()) == 0)
-    //   goto err;
-    // memmove(mem, (char*)pa, PGSIZE);
-    // if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-    //   kfree(mem);
-    //   goto err;
-    // }
   }
-  printf("END\n");
+
   return 0;
 
  err:

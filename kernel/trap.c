@@ -36,28 +36,54 @@ void alloc_page_mem(pagetable_t table_me, pagetable_t table_that, uint64 va)
   pte_t *pte_that;
   uint64 pa;
 
-  if ((mem = kalloc()) == 0)
-    panic("failed: alloc mem in alloc_page_mem\n");
-
   if ((pte_me = walk(table_me, va, 0)) == 0)
+  {
     panic("pte_me is null\n");
+  }
+
+  if(pte_me == 0)
+  {
+    panic("pte_me is null \n");
+  }
+
+  if( (*pte_me & PTE_COW) == 0)
+  {
+    return ;
+  }
+
+  printf("BEGIN\n");
+  if ((mem = kalloc()) == 0)
+  {
+    panic("failed: alloc mem in alloc_page_mem\n");
+  }
 
   if ((pte_that = walk(table_that, va, 0)) == 0)
+  {
     panic("pte_that is null\n");
+  }
 
   if ((pa = walkaddr(table_that, va)) == 0)
+  {
     panic("faild: walkaddr in alloc_page_mem\n");
+  }
 
-  memmove((void*)mem, (void*)pa, PGSIZE);
+  memmove((void *)mem, (void *)pa, PGSIZE);
 
   (*pte_that) |= PTE_W;
+  (*pte_that) &= (~PTE_COW);
 
-  (*pte_me) &= (~PTE_V);
+  // (*pte_me) &= (~PTE_V);
   uint64 flag = PTE_FLAGS(*pte_me);
-  flag |= PTE_W;
-  // flag &= (~PTE_V);
-  if (mappages(table_me, va, PGSIZE, (uint64)mem, flag) == 0)
-    panic("failed: mappages in alloc_page_mem\n");
+  uint64 new_pa = (uint64)mem;
+  (*pte_me) = PA2PTE(new_pa) | flag;
+
+  printf("END\n");
+
+  // uint64 base_va = PGROUNDDOWN(va);
+  // if (mappages(table_me, va, PGSIZE, (uint64)mem, flag) == 0)
+  // {
+    // panic("failed: mappages in alloc_page_mem\n");
+  // }
 }
 
 //
@@ -97,10 +123,10 @@ usertrap(void)
 
     syscall();
   } 
-  // else if( r_scause() == 13 || r_scause() == 15){
-    // if(p->parent)
-    //   alloc_page_mem(p->pagetable, p->parent->pagetable,r_stval());
-  // }
+  else if( r_scause() == 13 || r_scause() == 15){
+    if(p->parent)
+      alloc_page_mem(p->pagetable, p->parent->pagetable,r_stval());
+  }
    else if((which_dev = devintr()) != 0){
     // ok
   } else {
