@@ -145,21 +145,24 @@ kvmpa(uint64 va)
 // physical addresses starting at pa. va and size might not
 // be page-aligned. Returns 0 on success, -1 if walk() couldn't
 // allocate a needed page-table page.
-int
-mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
+int mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 {
   uint64 a, last;
   pte_t *pte;
 
   a = PGROUNDDOWN(va);
   last = PGROUNDDOWN(va + size - 1);
-  for(;;){
-    if((pte = walk(pagetable, a, 1)) == 0)
+  for (;;)
+  {
+    if ((pte = walk(pagetable, a, 1)) == 0)
       return -1;
-    if(*pte & PTE_V)
+
+    if (*pte & PTE_V)
       panic("remap");
+
     *pte = PA2PTE(pa) | perm | PTE_V;
-    if(a == last)
+
+    if (a == last)
       break;
     a += PGSIZE;
     pa += PGSIZE;
@@ -346,8 +349,8 @@ int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
     if (flags & PTE_W)
     {
-      printf("BEGIN------------------------\n");
-      printFreeNum();
+      // printf("BEGIN------------------------\n");
+      // printFreeNum();
 
       flags &= (~PTE_W);
       flags |= PTE_COW;
@@ -359,9 +362,10 @@ int uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     {
       goto err;
     }
+    kinc((void*)pa);
 
-    printFreeNum();
-    printf("END------------------------\n");
+    // printFreeNum();
+    // printf("END------------------------\n");
   }
 
   return 0;

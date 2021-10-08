@@ -16,6 +16,7 @@ extern char end[]; // first address after kernel.
 
 struct run {
   struct run *next;
+  int ref;
 };
 
 struct {
@@ -54,6 +55,32 @@ freerange(void *pa_start, void *pa_end)
     kfree(p);
 }
 
+void kinc(void *pa)
+{
+    struct run *r;
+
+  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
+    panic("kinc");
+
+  uint64 i_pa = (uint64)pa;
+  uint64 base = PGROUNDDOWN(i_pa);
+  r = (struct run*)base;
+  r->ref++;
+}
+
+void kdec(void *pa)
+{
+    struct run *r;
+
+  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
+    panic("kinc");
+
+  uint64 i_pa = (uint64)pa;
+  uint64 base = PGROUNDDOWN(i_pa);
+  r = (struct run*)base;
+  r->ref--;
+}
+
 // Free the page of physical memory pointed at by v,
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
@@ -66,10 +93,14 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
+  r = (struct run*)pa;
+
+  r->ref--;
+  if(r->ref > 0)
+    return;
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
 
-  r = (struct run*)pa;
 
   acquire(&kmem.lock);
   r->next = kmem.freelist;
@@ -91,7 +122,9 @@ kalloc(void)
     kmem.freelist = r->next;
   release(&kmem.lock);
 
-  if(r)
+  if(r){
     memset((char*)r, 5, PGSIZE); // fill with junk
+    r->ref = 1;
+  }
   return (void*)r;
 }

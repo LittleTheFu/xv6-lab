@@ -29,14 +29,13 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
-void alloc_page_mem(pagetable_t table_me, pagetable_t table_that, uint64 va)
+void alloc_page_mem(pagetable_t pagetable, uint64 va)
 {
   char *mem;
   pte_t *pte_me;
-  pte_t *pte_that;
   uint64 pa;
 
-  if ((pte_me = walk(table_me, va, 0)) == 0)
+  if ((pte_me = walk(pagetable, va, 0)) == 0)
   {
     panic("pte_me is null\n");
   }
@@ -46,7 +45,7 @@ void alloc_page_mem(pagetable_t table_me, pagetable_t table_that, uint64 va)
     panic("pte_me is null \n");
   }
 
-  if( (*pte_me & PTE_COW) == 0)
+  if( ( (*pte_me) & PTE_COW) == 0)
   {
     return ;
   }
@@ -59,23 +58,21 @@ void alloc_page_mem(pagetable_t table_me, pagetable_t table_that, uint64 va)
     panic("failed: alloc mem in alloc_page_mem\n");
   }
 
-  if ((pte_that = walk(table_that, va, 0)) == 0)
-  {
-    panic("pte_that is null\n");
-  }
-
-  if ((pa = walkaddr(table_that, va)) == 0)
+  if ((pa = walkaddr(pagetable, va)) == 0)
   {
     panic("faild: walkaddr in alloc_page_mem\n");
   }
 
   memmove((void *)mem, (void *)pa, PGSIZE);
 
-  (*pte_that) |= PTE_W;
-  (*pte_that) &= (~PTE_COW);
+  // (*pte_that) |= PTE_W;
+  // (*pte_that) &= (~PTE_COW);
 
   // (*pte_me) &= (~PTE_V);
   uint64 flag = PTE_FLAGS(*pte_me);
+  flag &= (~PTE_COW);
+  flag |= PTE_W;
+
   uint64 new_pa = (uint64)mem;
   (*pte_me) = PA2PTE(new_pa) | flag;
 
@@ -127,8 +124,7 @@ usertrap(void)
     syscall();
   } 
   else if( r_scause() == 13 || r_scause() == 15){
-    if(p->parent)
-      alloc_page_mem(p->pagetable, p->parent->pagetable,r_stval());
+      alloc_page_mem(p->pagetable, r_stval());
   }
    else if((which_dev = devintr()) != 0){
     // ok

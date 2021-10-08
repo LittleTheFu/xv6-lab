@@ -64,6 +64,9 @@ void            printFreeNum();
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
+void            kinc(void *);
+void            kdec(void *);
+
 
 // log.c
 void            initlog(int, struct superblock*);
