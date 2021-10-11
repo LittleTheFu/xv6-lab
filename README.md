@@ -9,3 +9,5 @@ traps --- done
 lazy --- done
 
 cow --- [cowtest passed] [usertests not passed]
+
+thread --- done
