@@ -9,7 +9,9 @@
             "cStandard": "gnu11",
             "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64",
-            "defines": ["LAB_LOCK"]
+            "defines": [
+                "LAB_LOCK"
+            ]
         }
     ],
     "version": 4
