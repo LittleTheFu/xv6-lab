@@ -371,7 +371,6 @@ iunlockput(struct inode *ip)
 // in blocks on the disk. The first NDIRECT block numbers
 // are listed in ip->addrs[].  The next NINDIRECT blocks are
 // listed in block ip->addrs[NDIRECT].
-
 // Return the disk block address of the nth block in inode ip.
 // If there is no such block, bmap allocates one.
 static uint
@@ -379,8 +378,8 @@ bmap(struct inode *ip, uint bn)
 {
   uint addr, *a;
   struct buf *bp;
-  int level1;
-  int level2;
+  uint level1;
+  uint level2;
 
   if (bn < NDIRECT)
   {
@@ -409,21 +408,20 @@ bmap(struct inode *ip, uint bn)
   bn -= NINDIRECT_1;
   level1 = bn / NINDIRECT_1;
   level2 = bn % NINDIRECT_1;
+
   if (bn < NINDIRECT_2)
   {
-
     if ((addr = ip->addrs[NDIRECT + 1]) == 0)
-    {
       ip->addrs[NDIRECT + 1] = addr = balloc(ip->dev);
-      bp = bread(ip->dev, addr);
-      a = (uint *)bp->data;
-      if ((addr = a[level1]) == 0)
-      {
-        a[level1] = addr = balloc(ip->dev);
-        log_write(bp);
-      }
-      brelse(bp);
+
+    bp = bread(ip->dev, addr);
+    a = (uint *)bp->data;
+    if ((addr = a[level1]) == 0)
+    {
+      a[level1] = addr = balloc(ip->dev);
+      log_write(bp);
     }
+    brelse(bp);
 
     bp = bread(ip->dev, addr);
     a = (uint *)bp->data;
