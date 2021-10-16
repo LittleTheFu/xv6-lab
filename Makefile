@@ -170,6 +170,7 @@ UPROGS=\
 	$U/_mkdir\
 	$U/_rm\
 	$U/_sh\
+	$U/_symlink\
 	$U/_symlinktest\
 	$U/_stressfs\
 	$U/_usertests\
